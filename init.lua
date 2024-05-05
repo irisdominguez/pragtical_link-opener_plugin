@@ -55,10 +55,37 @@ local function draw_underline(self, str, line, x, y, s, e, color)
     local h = math.ceil(1 * SCALE)
     local rx1, ry1 = self:get_line_screen_position(line, s)
     local rx2, ry2 = self:get_line_screen_position(line, e + 1)
+    local w = self:get_font():get_width(1)
     
-    renderer.draw_rect(rx1, ry1 + self:get_line_height() - h, rx2 - rx1, h, color)
-    --renderer.draw_text(self:get_font(), str, x1, y + oy, color)
-    --renderer.draw_text(self:get_font(), str, rx1, ry1 + oy, color)
+    -- Get token color
+    local column = 1
+    for _, type, text in self.doc.highlighter:each_token(line) do
+      local length = #text
+      local half_token = column + (length / 2)
+      if (s <= half_token) and (half_token <= e) then
+        color = style.syntax[type]
+        break
+      end
+      column = column + length
+    end
+    
+    if ry1 ~= ry2 then
+      -- We are softwrapped in a long link
+      local rx2, ry2 = self:get_line_screen_position(line, s)
+      for c = s+1, e+1, 1 do
+        local rxnew, rynew = self:get_line_screen_position(line, c)
+        if ry1 ~= rynew then
+          renderer.draw_rect(rx1, ry1 + self:get_line_height() - h, rx2 - rx1 + w, h, color)
+          rx1 = rxnew
+          ry1 = rynew
+        end
+        rx2 = rxnew
+        ry2 = rynew
+      end
+      renderer.draw_rect(rx1, ry1 + self:get_line_height() - h, rx2 - rx1, h, color)
+    else
+      renderer.draw_rect(rx1, ry1 + self:get_line_height() - h, rx2 - rx1, h, color)
+    end
 end
 
 local function highlight_link(self, line, x, y, color)
