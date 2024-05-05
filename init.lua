@@ -28,10 +28,10 @@ config.plugins.link_opener =
         format_urls = true,
         config_spec = {
             --- config specification used by the settings gui
-            name = "Link opener",
+            name = "Link Opener",
             {
-                label = "Enable",
-                description = "Format URLs in document.",
+                label = "Format URLs",
+                description = "Toggles URL underlining in documents.",
                 path = "format_urls",
                 type = "toggle",
                 default = true
