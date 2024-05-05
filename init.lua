@@ -17,7 +17,7 @@ else
     platform_filelauncher = "xdg-open"
 end
 
-local url_pattern = "https?://%w+%.%w+[/%w_%-%.*(%%20)]+"
+local url_pattern = "https?://[/A-Za-z0-9%-%._%:%?#%[%]@!%$%&'%*%+,;%%=]+"
 
 -- Sample link: https://iris.eus
 
@@ -53,8 +53,12 @@ local function draw_underline(self, str, line, x, y, s, e, color)
     local x2 = x + self:get_col_x_offset(line, e + 1)
     local oy = self:get_line_text_y_offset()
     local h = math.ceil(1 * SCALE)
-    renderer.draw_rect(x1, y + self:get_line_height() - h, x2 - x1, h, color)
-    renderer.draw_text(self:get_font(), str, x1, y + oy, color)
+    local rx1, ry1 = self:get_line_screen_position(line, s)
+    local rx2, ry2 = self:get_line_screen_position(line, e + 1)
+    
+    renderer.draw_rect(rx1, ry1 + self:get_line_height() - h, rx2 - rx1, h, color)
+    --renderer.draw_text(self:get_font(), str, x1, y + oy, color)
+    --renderer.draw_text(self:get_font(), str, rx1, ry1 + oy, color)
 end
 
 local function highlight_link(self, line, x, y, color)
