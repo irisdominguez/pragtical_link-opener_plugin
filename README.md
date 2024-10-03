@@ -14,7 +14,9 @@ Alternatively the init.lua file can be renamed link_opener.lua and dropped in th
 
 ## Usage
 
-Move the cursor to any link, and then right click select `Open link`. Alternatively, press `Ctrl + Enter` while on the link.
+Move the cursor to any link, and press `Ctrl + Enter` while on the link.
+
+Alternatively, right click on any link and select `Open link` from the context menu, or `Ctrl + Alt + Left click` on any link.
 
 ## Contributing
 

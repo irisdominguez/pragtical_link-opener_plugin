@@ -138,9 +138,31 @@ end
 
 local docview_predicate = command.generate_predicate("core.docview")
 
-local function url_at_caret()
+local function get_url_at_pointer()
+    local av = core.active_view
+    if av.doc then
+        local mx, my = core.root_view.mouse.x, core.root_view.mouse.y
+        local line, col = av:resolve_screen_position(mx, my)
+        if line and col then
+            local text = av.doc.lines[line]
+            local s, e = 0, 0
+            while true do
+                s, e = text:find(url_pattern, e + 1)
+                if s == nil then
+                    return nil
+                end
+                if col >= s and col <= e + 1 then
+                    return text:sub(s, e):lower(), s, e
+                end
+            end
+        end
+    end
+    return nil
+end
+
+local function url_at_pointer()
     if docview_predicate() then
-        if get_url_at_caret() then
+        if get_url_at_pointer() then
             return true
         end
     end
@@ -156,17 +178,26 @@ command.add(
             else
                 core.log("No link under cursor")
             end
+        end,
+        ["link-opener:open-link-at-pointer"] = function()
+            local url = get_url_at_pointer()
+            if url then
+                open_url(url)
+            else
+                core.log("No link under pointer")
+            end
         end
     }
 )
 
 keymap.add {["ctrl+return"] = "link-opener:open-link"}
+keymap.add {["ctrl+alt+1lclick"] = "link-opener:open-link-at-pointer"}
 
 contextmenu:register(
-    url_at_caret,
+    url_at_pointer,
     {
         contextmenu.DIVIDER,
-        {text = "Open link", command = "link-opener:open-link"}
+        {text = "Open link", command = "link-opener:open-link-at-pointer"}
     }
 )
 
