@@ -133,7 +133,7 @@ end
 
 local function open_url(url)
     core.log("Opening %s...", url)
-    os.execute(string.format('%s "%s"', config.plugins.link_opener.filelauncher, url))
+    os.execute(string.format('%s %s', config.plugins.link_opener.filelauncher, url))
 end
 
 local docview_predicate = command.generate_predicate("core.docview")
