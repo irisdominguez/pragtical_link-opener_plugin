@@ -17,7 +17,7 @@ else
     platform_filelauncher = "xdg-open"
 end
 
-local url_pattern = "https?://[/A-Za-z0-9%-%._%:%?#%[%]@!%$%&'%*%+,;%%=]+"
+local url_pattern = "https?://[/A-Za-z0-9%-%._%:%?#%[%]@!%$%&'%*%+~,;%%=]+"
 
 -- Sample link: https://iris.eus
 
@@ -48,6 +48,35 @@ config.plugins.link_opener =
     config.plugins.link_opener
 )
 
+local get_visible_cols_range = DocView.get_visible_cols_range
+if not get_visible_cols_range then
+  ---Get an estimated range of visible columns. It is an estimate because fonts
+  ---and their fallbacks may not be monospaced or may differ in size.
+  ---@param self core.docview
+  ---@param line integer
+  ---@param extra_cols integer Amount of columns to deduce on col1 and include on col2
+  ---@return integer col1
+  ---@return integer col2
+  get_visible_cols_range = function(self, line, extra_cols)
+    extra_cols = extra_cols or 100
+    local gw = self:get_gutter_width()
+    local line_x = self.position.x + gw
+    local x = -self.scroll.x + self.position.x + gw
+
+    local non_visible_x = common.clamp(line_x - x, 0, math.huge)
+    local char_width = self:get_font():get_width("W")
+    local non_visible_chars_left = math.floor(non_visible_x / char_width)
+    local visible_chars_right = math.floor((self.size.x - gw) / char_width)
+    local line_len = #self.doc.lines[line]
+
+    if non_visible_chars_left > line_len then return 0, 0 end
+
+    return
+      math.max(1, non_visible_chars_left - extra_cols),
+      math.min(line_len, non_visible_chars_left + visible_chars_right + extra_cols)
+  end
+end
+
 local function draw_underline(self, str, line, x, y, s, e, color)
     local x1 = x + self:get_col_x_offset(line, s)
     local x2 = x + self:get_col_x_offset(line, e + 1)
@@ -56,7 +85,7 @@ local function draw_underline(self, str, line, x, y, s, e, color)
     local rx1, ry1 = self:get_line_screen_position(line, s)
     local rx2, ry2 = self:get_line_screen_position(line, e + 1)
     local w = self:get_font():get_width(1)
-    
+
     -- Get token color
     local column = 1
     for _, type, text in self.doc.highlighter:each_token(line) do
@@ -68,7 +97,7 @@ local function draw_underline(self, str, line, x, y, s, e, color)
       end
       column = column + length
     end
-    
+
     if ry1 ~= ry2 then
       -- We are softwrapped in a long link
       local rx2, ry2 = self:get_line_screen_position(line, s)
@@ -89,14 +118,15 @@ local function draw_underline(self, str, line, x, y, s, e, color)
 end
 
 local function highlight_link(self, line, x, y, color)
-    local text = self.doc.lines[line]
+    local vs, ve = get_visible_cols_range(self, line, 2000)
+    local text = self.doc.lines[line]:sub(vs, ve)
     local s, e = 0, 0
 
     while true do
         s, e = text:lower():find(url_pattern, e + 1)
         if s then
             local str = text:sub(s, e)
-            draw_underline(self, str, line, x, y, s, e, color)
+            draw_underline(self, str, line, x, y, vs + s - 1, vs + e - 1, color)
         end
 
         if not s then
@@ -118,15 +148,17 @@ end
 local function get_url_at_caret()
     local doc = core.active_view.doc
     local l, c = doc:get_selection()
+    local ss, se = math.max(1, c - 2000), math.min(#doc.lines[l], c + 2000)
+    local text = doc.lines[l]:sub(ss, se)
     local s, e = 0, 0
-    local text = doc.lines[l]
     while true do
         s, e = text:find(url_pattern, e + 1)
         if s == nil then
             return nil
         end
-        if c >= s and c <= e + 1 then
-            return text:sub(s, e):lower(), s, e
+        local as, ae = ss + s - 1, ss + e
+        if c >= as and c <= ae then
+            return text:sub(s, e):lower(), as, ae
         end
     end
 end
@@ -144,15 +176,18 @@ local function get_url_at_pointer()
         local mx, my = core.root_view.mouse.x, core.root_view.mouse.y
         local line, col = av:resolve_screen_position(mx, my)
         if line and col then
-            local text = av.doc.lines[line]
+            local ss = math.max(1, col - 2000)
+            local se = math.min(#av.doc.lines[line], col + 2000)
+            local text = av.doc.lines[line]:sub(ss, se)
             local s, e = 0, 0
             while true do
                 s, e = text:find(url_pattern, e + 1)
                 if s == nil then
                     return nil
                 end
-                if col >= s and col <= e + 1 then
-                    return text:sub(s, e):lower(), s, e
+                local as, ae = ss + s - 1, ss + e
+                if col >= as and col <= ae then
+                    return text:sub(s, e):lower(), as, ae
                 end
             end
         end
@@ -200,4 +235,3 @@ contextmenu:register(
         {text = "Open link", command = "link-opener:open-link-at-pointer"}
     }
 )
-
