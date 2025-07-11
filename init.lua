@@ -17,7 +17,7 @@ else
     platform_filelauncher = "xdg-open"
 end
 
-local url_pattern = "https?://[/A-Za-z0-9%-%._%:%?#%[%]@!%$%&'%*%+~,;%%=]+"
+local url_pattern = "(https?://[/A-Za-z0-9%-%._%:%?#%[%]@!%$%&'%*%+~,;%%=]+)"
 
 -- Sample link: https://iris.eus
 
@@ -117,15 +117,25 @@ local function draw_underline(self, str, line, x, y, s, e, color)
     end
 end
 
+local function find_url_pattern(text, init)
+    local s, e, url = text:find(url_pattern, init)
+    -- strip trailing punctuation
+    if s then
+        local prev_len = #url
+        url = url:match("^(.-)[%.,%]]*$") or url
+        e = e - (prev_len - #url)
+    end
+    return s, e, url
+end
+
 local function highlight_link(self, line, x, y, color)
     local vs, ve = get_visible_cols_range(self, line, 2000)
     local text = self.doc.lines[line]:sub(vs, ve)
-    local s, e = 0, 0
+    local s, e, str = 0, 0, ""
 
     while true do
-        s, e = text:lower():find(url_pattern, e + 1)
+        s, e, str = find_url_pattern(text, e + 1)
         if s then
-            local str = text:sub(s, e)
             draw_underline(self, str, line, x, y, vs + s - 1, vs + e - 1, color)
         end
 
@@ -150,15 +160,15 @@ local function get_url_at_caret()
     local l, c = doc:get_selection()
     local ss, se = math.max(1, c - 2000), math.min(#doc.lines[l], c + 2000)
     local text = doc.lines[l]:sub(ss, se)
-    local s, e = 0, 0
+    local s, e, str = 0, 0, ""
     while true do
-        s, e = text:find(url_pattern, e + 1)
+        s, e, str = find_url_pattern(text, e + 1)
         if s == nil then
             return nil
         end
         local as, ae = ss + s - 1, ss + e
         if c >= as and c <= ae then
-            return text:sub(s, e):lower(), as, ae
+            return str, as, ae
         end
     end
 end
@@ -179,15 +189,15 @@ local function get_url_at_pointer()
             local ss = math.max(1, col - 2000)
             local se = math.min(#av.doc.lines[line], col + 2000)
             local text = av.doc.lines[line]:sub(ss, se)
-            local s, e = 0, 0
+            local s, e, str = 0, 0, ""
             while true do
-                s, e = text:find(url_pattern, e + 1)
+                s, e, str = find_url_pattern(text, e + 1)
                 if s == nil then
                     return nil
                 end
                 local as, ae = ss + s - 1, ss + e
                 if col >= as and col <= ae then
-                    return text:sub(s, e):lower(), as, ae
+                    return str, as, ae
                 end
             end
         end
