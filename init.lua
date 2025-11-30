@@ -204,13 +204,31 @@ command.add(
             if url then
                 open_url(url)
             else
-                core.log("No link under cursor")
+                core.log("No link at cursor")
             end
         end,
         ["link-opener:open-link-at-pointer"] = function()
             local url = get_url_at_pointer()
             if url then
                 open_url(url)
+            else
+                core.log("No link under pointer")
+            end
+        end,
+        ["link-opener:copy-link"] = function()
+            local url = get_url_at_caret()
+            if url then
+                system.set_clipboard(url)
+                core.log("Copied: %s", url)
+            else
+                core.log("No link at cursor")
+            end
+        end,
+        ["link-opener:copy-link-at-pointer"] = function()
+            local url = get_url_at_pointer()
+            if url then
+                system.set_clipboard(url)
+                core.log("Copied: %s", url)
             else
                 core.log("No link under pointer")
             end
@@ -225,6 +243,7 @@ contextmenu:register(
     url_at_pointer,
     {
         contextmenu.DIVIDER,
-        {text = "Open link", command = "link-opener:open-link-at-pointer"}
+        {text = "Open link", command = "link-opener:open-link-at-pointer"},
+        {text = "Copy link", command = "link-opener:copy-link-at-pointer"}
     }
 )
