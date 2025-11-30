@@ -8,15 +8,6 @@ local DocView = require "core.docview"
 local style = require "core.style"
 local contextmenu = require "plugins.contextmenu"
 
-local platform_filelauncher
-if PLATFORM == "Windows" then
-    platform_filelauncher = "start"
-elseif PLATFORM == "Mac OS X" then
-    platform_filelauncher = "open"
-else
-    platform_filelauncher = "xdg-open"
-end
-
 local url_pattern = "(https?://[/A-Za-z0-9%-%._%:%?#%[%]@!%$%&'%*%+~,;%%=]+)"
 
 -- Sample link: https://iris.eus
@@ -24,7 +15,6 @@ local url_pattern = "(https?://[/A-Za-z0-9%-%._%:%?#%[%]@!%$%&'%*%+~,;%%=]+)"
 config.plugins.link_opener =
     common.merge(
     {
-        filelauncher = platform_filelauncher,
         format_urls = true,
         config_spec = {
             --- config specification used by the settings gui
@@ -35,13 +25,6 @@ config.plugins.link_opener =
                 path = "format_urls",
                 type = "toggle",
                 default = true
-            },
-            {
-                label = "URL opener",
-                description = "Command used to open the url under the cursor.",
-                path = "filelauncher",
-                type = "string",
-                default = platform_filelauncher
             }
         }
     },
@@ -175,7 +158,7 @@ end
 
 local function open_url(url)
     core.log("Opening %s...", url)
-    system.exec(string.format('%s "%s"', config.plugins.link_opener.filelauncher, url))
+    common.open_in_system(url)
 end
 
 local docview_predicate = command.generate_predicate("core.docview")
