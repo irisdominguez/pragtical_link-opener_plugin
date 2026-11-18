@@ -163,10 +163,10 @@ end
 
 local docview_predicate = command.generate_predicate("core.docview")
 
-local function get_url_at_pointer()
+local function get_url_at_pointer(mx, my)
     local av = core.active_view
     if av.doc then
-        local mx, my = core.root_view.mouse.x, core.root_view.mouse.y
+        mx, my = mx or core.root_view.mouse.x, my or core.root_view.mouse.y
         local line, col = av:resolve_screen_position(mx, my)
         if line and col then
             local ss = math.max(1, col - 2000)
@@ -188,12 +188,14 @@ local function get_url_at_pointer()
     return nil
 end
 
-local function url_at_pointer()
+-- Keep the original URL while the pointer moves onto the context menu.
+local context_url
+local function url_at_pointer(x, y)
+    context_url = nil
     if docview_predicate() then
-        if get_url_at_pointer() then
-            return true
-        end
+        context_url = get_url_at_pointer(x, y)
     end
+    return context_url ~= nil
 end
 
 command.add(
@@ -236,6 +238,22 @@ command.add(
     }
 )
 
+command.add(function()
+    return docview_predicate() and context_url ~= nil
+end, {
+    ["link-opener:open-context-link"] = function()
+        local url = context_url
+        context_url = nil
+        open_url(url)
+    end,
+    ["link-opener:copy-context-link"] = function()
+        local url = context_url
+        context_url = nil
+        system.set_clipboard(url)
+        core.log("Copied: %s", url)
+    end
+})
+
 keymap.add {["ctrl+return"] = "link-opener:open-link"}
 keymap.add {["ctrl+alt+1lclick"] = "link-opener:open-link-at-pointer"}
 
@@ -243,7 +261,7 @@ contextmenu:register(
     url_at_pointer,
     {
         contextmenu.DIVIDER,
-        {text = "Open link", command = "link-opener:open-link-at-pointer"},
-        {text = "Copy link", command = "link-opener:copy-link-at-pointer"}
+        {text = "Open link", command = "link-opener:open-context-link"},
+        {text = "Copy link", command = "link-opener:copy-context-link"}
     }
 )
